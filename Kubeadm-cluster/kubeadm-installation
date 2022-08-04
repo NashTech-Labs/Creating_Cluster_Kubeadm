@@ -1,0 +1,80 @@
+### Installation Process :
+
+Also, all the commands used in this guide for master and worker nodes config are hosted as scripts in Github. You can clone the repository for reference.
+
+git clone https://github.com/scriptcamp/kubeadm-scripts.git
+
+**Update**
+
+The first task is to ensure all of our packages are updated on each server.
+
+```
+root@host:~# apt update -y && apt upgrade -y
+```
+**Disable Swap Memory**
+
+For kubelet to work correctly, it is essential to disable SWAP memory. This change is applied to each server. The hard drive's paging space is used to temporarily store data when there is not enough space in RAM. We accomplish this using the following commands.
+
+```
+root@host:~# sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
+root@host:~# swapoff -a
+
+```
+## Install Kubeadm & Kubelet & Kubectl on all Nodes
+
+**Kubelet** - This is a system service that runs on all nodes and configures the cluster's various components.
+**Kubeadm** - The command-line tool that installs and configures various cluster components.
+**Kubectl** - This is a command-line tool used to send commands to the cluster via the API. It also makes working with commands in the terminal easier.
+
+
+**Install the required dependencies.**
+
+```
+sudo apt-get update
+sudo apt-get install -y apt-transport-https ca-certificates curl
+sudo curl -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg
+
+```
+
+**Add the GPG key and apt repository.**
+
+```
+echo "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+```
+
+**Update apt and install kubelet, kubeadm, and kubectl.**
+
+```
+sudo apt-get update -y
+sudo apt-get install -y kubelet kubeadm kubectl
+```
+### Initialize Kubeadm On Master Node To Setup Control Plane
+
+Execute the commands in this section only on the master node.
+
+```
+IPADDR="10.0.0.10"
+NODENAME=$(hostname -s)
+
+```
+Now, initialize the master node control plane configurations using the following kubeadm command.
+
+```
+sudo kubeadm init --apiserver-advertise-address=$IPADDR  --apiserver-cert-extra-sans=$IPADDR  --pod-network-cidr=192.168.0.0/16 --node-name $NODENAME --ignore-preflight-errors Swap
+
+```
+Use the following commands from the output to create the kubeconfig in master so that you can use kubectl to interact with cluster API.
+
+```
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+```
+Now, verify the kubeconfig by executing the following kubectl command to list all the pods in the kube-system namespace.
+
+```
+kubectl get po -n kube-system
+
+```
+
